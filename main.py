@@ -138,7 +138,7 @@ def blogs():
     else:
         #posts = Blog.query.filter_by(deleted=False).all()
         posts = Blog.query.all()
-    users = User.query.all()
+    users = User.query.filter_byall()
     return render_template("index.html", posts=posts, title="Blog Posts",)
 
 @app.route('/newpost', methods=['GET', 'POST'])
