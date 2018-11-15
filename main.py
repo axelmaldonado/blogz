@@ -30,8 +30,8 @@ class User(db.Model):
     password = db.Column(db.String(120))
     blogs = db.relationship('Blog', backref='owner')
 
-    def __init__(self, email, password):
-        self.email = email
+    def __init__(self, username, password):
+        self.username = username
         self.password = password
 
     # existing_user = User.query.filter_by(username=username).first()
@@ -40,7 +40,7 @@ class User(db.Model):
 @app.before_request
 def require_login():
     allowed_routes = ['login', 'signup', 'blogs', 'index']
-    if request.endpoint not in allowed_routes and 'email' not in session:
+    if request.endpoint not in allowed_routes and 'username' not in session:
         return redirect('/login')
 
 @app.route('/login', methods=['POST', 'GET'])
@@ -61,7 +61,7 @@ def login():
         # incorrect password and is redirected to the /login page with 
         # a message that their password is incorrect.
         if user and user.password != password:
-            flash("Password Incorrect")
+            flash("Password Incorrect", "error")
             return redirect('/login')
         #User tries to login with a username that is not stored in the database and is 
         # redirected to the /login page with a message that this username does not exist.      
@@ -74,7 +74,6 @@ def login():
 
 @app.route('/signup', methods=['POST', 'GET'])
 def signup():
-
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
@@ -84,33 +83,33 @@ def signup():
         verify_error = False
         
         if username == "":
-            flash("Username cannot be blank")
+            flash("Username cannot be blank", 'error')
             username_error = True
         if len(username) < 3:
-            flash("Username must be greater than 3 characters")
+            flash("Username must be greater than 3 characters", 'error')
             username_error = True
         
         if password == "":
-            flash("Password cannot be blank")
+            flash("Password cannot be blank", 'error')
             password_error = True
         if len(username) < 3:
-            flash("Password must be greater than 3 characters")
+            flash("Password must be greater than 3 characters", 'error')
             password_error = True
 
         if password != verify:
-            flash("Passwords don't match")
+            flash("Passwords don't match", 'error')
             verify_error = True
 
-        existing_user = User.query.filter_by(username=username).first()
-        if existing_user:
-            flash("Username is already taken")
-
-        if not existing_user and not username_error and not password_error and not verify_error:
-            new_user = User(username, password)
-            db.session.add(new_user)
-            db.session.commit()
-            session['username'] = username
-            return redirect("/newpost")
+        if not username_error and not password_error and not verify_error:
+            existing_user = User.query.filter_by(username=username).first()
+            if not existing_user:
+                new_user = User(username, password)
+                db.session.add(new_user)
+                db.session.commit()
+                session['username'] = username
+                return redirect("/newpost")
+            else:
+                flash("Username already taken", "error")
         else:
             return redirect("/signup")
 
@@ -118,30 +117,34 @@ def signup():
 
 @app.route('/logout')
 def logout():
-    del session['email']
-    return redirect('/')
+    del session['username']
+    flash("Logged Out")
+    return redirect('/login')
 
-@app.route('/', methods=['POST', 'GET'])
-def index():
-    #TODO list all users
-    return redirect('/blog')
+@app.route('/', methods=['GET'])
+def index():    
+    users = User.query.all()
+    return render_template('index.html', users=users, title="Blog Users")
+
 
 @app.route('/blog', methods=['POST', 'GET'])
 def blogs():
-
+    
     id_check = request.args.get("id")
     if id_check is not None:
         post_id = int(request.args.get("id"))
         post = Blog.query.filter_by(id=post_id).first()
         return render_template("single-blog.html", post=post)
     else:
-        posts = Blog.query.filter_by(deleted=False).all()
+        #posts = Blog.query.filter_by(deleted=False).all()
+        posts = Blog.query.all()
+    users = User.query.all()
+    return render_template("index.html", posts=posts, title="Blog Posts",)
 
-    return render_template("index.html", posts=posts)
-
-@app.route('/blog/newpost', methods=['GET', 'POST'])
+@app.route('/newpost', methods=['GET', 'POST'])
 def new_post():
-    
+    owner = User.query.filter_by(username=session['username']).first()
+
     if request.method == "POST":
         blog_title = request.form['blog-title']
         blog_post = request.form['blog-post']
@@ -158,7 +161,7 @@ def new_post():
             post_error = "Please limit your Blog post to 400 characters"
 
         if not title_error and not post_error:
-            new_post = Blog(blog_title, blog_post)
+            new_post = Blog(blog_title, blog_post, owner)
             db.session.add(new_post)
             db.session.commit()
             post_id = (new_post.id)
