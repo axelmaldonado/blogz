@@ -1,11 +1,13 @@
-from flask import Flask, request, redirect, render_template, url_for
+from flask import Flask, request, redirect, render_template, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 app.config['DEBUG'] = True
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://build-a-blog:Maldonado@localhost:8889/build-a-blog'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://blogz:admin@localhost:8889/blogz'
 app.config['SQLALCHEMY_ECHO'] = True
 db = SQLAlchemy(app)
+app.secret_key = 'W3YnjNA&kuMJK'
+
 
 class Blog(db.Model):
 
@@ -13,18 +15,119 @@ class Blog(db.Model):
     title = db.Column(db.String(120))
     body = db.Column(db.String(400))
     deleted = db.Column(db.Boolean, default=False)
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
-    def __init__(self, title, body):
+    def __init__(self, title, body, owner):
         self.title = title
         self.body = body
         self.deleted = False
+        self.owner = owner
+
+class User(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(120), unique=True)
+    password = db.Column(db.String(120))
+    blogs = db.relationship('Blog', backref='owner')
+
+    def __init__(self, email, password):
+        self.email = email
+        self.password = password
+
+    # existing_user = User.query.filter_by(username=username).first()
+
+# This is not a request handler. We want this to run for every request
+@app.before_request
+def require_login():
+    allowed_routes = ['login', 'signup', 'blogs', 'index']
+    if request.endpoint not in allowed_routes and 'email' not in session:
+        return redirect('/login')
+
+@app.route('/login', methods=['POST', 'GET'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        user = User.query.filter_by(username=username).first()
+        
+        #user enters a username that is stored in the db with
+        #the correct password and is redirected to the /newpost page
+        #with their username being stored in a session.
+        if user and user.password == password:
+            session['username'] = username
+            flash("Logged in")
+            return redirect('/')
+        #User enters a username that is stored in the database with an 
+        # incorrect password and is redirected to the /login page with 
+        # a message that their password is incorrect.
+        if user and user.password != password:
+            flash("Password Incorrect")
+            return redirect('/login')
+        #User tries to login with a username that is not stored in the database and is 
+        # redirected to the /login page with a message that this username does not exist.      
+        if not user:
+            flash('Username does not exist', 'error')
+            return redirect('/login')
+
+    return render_template('login.html')
+
+
+@app.route('/signup', methods=['POST', 'GET'])
+def signup():
+
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        verify = request.form['verify']
+        username_error = False
+        password_error = False
+        verify_error = False
+        
+        if username == "":
+            flash("Username cannot be blank")
+            username_error = True
+        if len(username) < 3:
+            flash("Username must be greater than 3 characters")
+            username_error = True
+        
+        if password == "":
+            flash("Password cannot be blank")
+            password_error = True
+        if len(username) < 3:
+            flash("Password must be greater than 3 characters")
+            password_error = True
+
+        if password != verify:
+            flash("Passwords don't match")
+            verify_error = True
+
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            flash("Username is already taken")
+
+        if not existing_user and not username_error and not password_error and not verify_error:
+            new_user = User(username, password)
+            db.session.add(new_user)
+            db.session.commit()
+            session['username'] = username
+            return redirect("/newpost")
+        else:
+            return redirect("/signup")
+
+    return render_template("signup.html")
+
+@app.route('/logout')
+def logout():
+    del session['email']
+    return redirect('/')
 
 @app.route('/', methods=['POST', 'GET'])
 def index():
+    #TODO list all users
     return redirect('/blog')
 
 @app.route('/blog', methods=['POST', 'GET'])
-def create_blog():
+def blogs():
 
     id_check = request.args.get("id")
     if id_check is not None:
@@ -59,7 +162,7 @@ def new_post():
             db.session.add(new_post)
             db.session.commit()
             post_id = (new_post.id)
-            return redirect(url_for("create_blog", id=post_id))
+            return redirect(url_for("blogs", id=post_id))
         else:
             return render_template("add-blog.html",title_error=title_error, post_error=post_error)
 
@@ -67,3 +170,4 @@ def new_post():
 
 if __name__ == '__main__':
     app.run()
+
