@@ -123,18 +123,23 @@ def logout():
 
 @app.route("/")
 def index():
-    user_id = request.args.get("user")
-    users = User.query.all()
-    posts = Blog.query.filter_by(owner_id=user_id).all()
-    return render_template("index.html", users=users, posts=posts, title="Blog Users")
 
+    id_check = request.args.get("id")
+    if id_check is not None:
+        post_id = int(request.args.get("id"))
+        post = Blog.query.filter_by(id=post_id).first()
+        return render_template("single-blog.html", post=post)
+    else:
+        posts = Blog.query.filter_by(deleted=False).all()
+
+    return render_template("index.html", posts=posts, title="blog users!")
 
 @app.route("/blog", methods=["GET","POST"])
 def blogs():
 
     id_check = request.args.get("id")
     user_check = request.args.get("user")
-    posts = Blog.query.all()
+    posts = Blog.query.filter_by(deleted=False).all()
 
     if id_check is not None:
         post_id = int(request.args.get("id"))
@@ -148,7 +153,7 @@ def blogs():
         posts = Blog.query.filter_by(deleted=False).all()
         
 
-    return render_template("index.html", posts=posts, title="Blog Posts")
+    return render_template("singleUser.html", posts=posts, title="Blog Posts")
 
 
 @app.route("/newpost", methods=['GET','POST'])
