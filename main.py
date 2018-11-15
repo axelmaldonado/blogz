@@ -121,18 +121,10 @@ def logout():
     flash("Logged Out")
     return redirect('/login')
 
-@app.route("/")
+@app.route('/', methods=['GET'])
 def index():
-
-    id_check = request.args.get("id")
-    if id_check is not None:
-        post_id = int(request.args.get("id"))
-        post = Blog.query.filter_by(id=post_id).first()
-        return render_template("single-blog.html", post=post)
-    else:
-        posts = Blog.query.filter_by(deleted=False).all()
-
-    return render_template("index.html", posts=posts, title="blog users!")
+    users = User.query.all()
+    return render_template('index.html', users=users, title="Blog Users")
 
 @app.route("/blog", methods=["GET","POST"])
 def blogs():
