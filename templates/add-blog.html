@@ -6,10 +6,10 @@
     <label name="blog-title">
         Title of New Blog Entry:
     </label>
-    <input type="text" name='blog-title' />
+    <input type="text" name='blog-title' value="{{title}}" />
     <p class="error">{{title_error}}</p>
     <br>
-    <textarea name="blog-post" rows="10" cols="30"></textarea> 
+    <textarea name="blog-post" rows="10" cols="30">{{blog_body}}</textarea> 
     <p class="error">{{post_error}}</p>
     <input type="submit" value='Submit' />
 </form>

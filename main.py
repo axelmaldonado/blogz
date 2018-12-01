@@ -92,8 +92,8 @@ def signup():
         if password == "":
             flash("Password cannot be blank", 'error')
             password_error = True
-        if len(username) < 3:
-            flash("Password must be greater than 3 characters", 'error')
+        if len(password) < 3:
+            flash("Password cannot be less than 3 characters long", 'error')
             password_error = True
 
         if password != verify:
@@ -161,16 +161,16 @@ def add_blog():
         post_error = False
 
         if blog_title == "":
-            flash("Please enter a Blog title for your post")
+            flash("Please enter a Blog title for your post", 'error')
             title_error = True
         if len(blog_title) > 50:
-            flash("Please limit your Blog title to 50 characters")
+            flash("Please limit your Blog title to 50 characters", 'error')
             title_error = True
         if blog_post == "":
-            flash("Please enter a Blog post before submitting")
+            flash("Please enter a Blog post before submitting", 'error')
             post_error = True
         if len(blog_post) > 500:
-            flash("Please limit your Blog post to 300 characters")
+            flash("Please limit your Blog post to 300 characters", 'error')
             post_error = True
 
         if not title_error and not post_error and owner:
@@ -180,7 +180,7 @@ def add_blog():
             post_id = (new_post.id)          
             return redirect(url_for("blogs",id=post_id))
         else:
-            return redirect("/newpost")
+            return render_template("add-blog.html", blog_body=blog_post, title=blog_title)
 
     return render_template("add-blog.html")
 
