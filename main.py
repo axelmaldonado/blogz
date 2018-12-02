@@ -62,7 +62,7 @@ def login():
         # a message that their password is incorrect.
         if user and user.password != password:
             flash("Password Incorrect", "error")
-            return redirect('/login')
+            return render_template('login.html', username=username)
         #User tries to login with a username that is not stored in the database and is 
         # redirected to the /login page with a message that this username does not exist.      
         if not user:
@@ -111,7 +111,7 @@ def signup():
             else:
                 flash("Username already taken", "error")
         else:
-            return redirect("/signup")
+            return render_template("signup.html", username=username)
 
     return render_template("signup.html")
 
